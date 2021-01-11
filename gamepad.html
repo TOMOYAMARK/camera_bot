@@ -17,7 +17,7 @@
       </img>
     </div>
     <div class="camera-display">
-      <img src="http://localhost:5000/video_feed"
+      <img src="http://172.20.10.7:5000/video_feed"
             title="iframe Example 1" id="sub_camera_1" width="320" height="240">
       </img>
       <img src="http://localhost:5000/video_feed"
@@ -160,7 +160,7 @@ const socket = new WebSocket(server_url);
 //カメラサーバ
 const main_camera1_server_url = "http://localhost:5000"
 const main_camera2_server_url = "http://localhost:5001"
-const sub_camera1_server_url = "http://192.168.43.233:5000"
+const sub_camera1_server_url = "http://172.20.10.7:5000"
 const sub_camera2_server_url = "http://192.168.43.250:5000"
 
 
@@ -440,12 +440,53 @@ $(function(){
       console.log(data);
     });
 
-    //Ajax通信を行う
     $.ajax({
     url:main_camera2_server_url+"/dsize",
     type:"post",
     dataType:"JSON",
     data:JSON.stringify(dsize_main), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+
+    //サブカメラ画像サイズの指定
+    $.ajax({
+    url:sub_camera1_server_url+"/dsize",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dsize_sub), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    $.ajax({
+    url:sub_camera2_server_url+"/dsize",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dsize_sub), 
     contentType: 'application/JSON', 
     })
     .done((data) => {
