@@ -1,0 +1,466 @@
+<html>
+  <head>
+    <script
+    src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+    crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="displays">
+    <h3>メインカメラ</h3>
+    <div class="camera-display">
+      <img src="http://localhost:5000/video_feed"
+            title="iframe Example 1" id="main_camera_1" width="640" height="360">
+      </img>
+      <img src="http://localhost:5000/video_feed"
+        title="iframe Example 1" id="main_camera_2" width="640" height="360">
+      </img>
+    </div>
+    <div class="camera-display">
+      <img src="http://localhost:5000/video_feed"
+            title="iframe Example 1" id="sub_camera_1" width="320" height="240">
+      </img>
+      <img src="http://localhost:5000/video_feed"
+        title="iframe Example 1" id="sub_camera_2" width="320" height="240">
+      </img>
+    </div>
+    <h3>サブカメラ</h3>
+    </div>
+    <div class="control-panel">
+
+      <div class="param-controls">
+        <label class="label" for="monitor_fps">FPS(0~30推奨)　[メインカメラ]</label>
+        <input type="number" value=30 id="monitor_fps" name="monitor_fps"><br><br>
+        <label class="label" for="monitor_sub_fps">FPS(0~30推奨)　[サブカメラ]</label>
+        <input type="number" value=10 id="monitor_sub_fps" name="monitor_sub_fps"><br><br>
+        <label class="label" for="monitor_delay">モニター追加遅延</label>
+        <input type="number" value=0 id="monitor_delay" name="monitor_fps">(秒)<br><br>
+        <label class="label" for="main_monitor_dsize">メインカメラ画像サイズ指定</label>
+        <input type="number" value=640 id="main_monitor_dsizex" name="main_monitor_dsizex"> x 
+        <input type="number" value=360 id="main_monitor_dsizey" name="main_monitor_dsizey"><br><br>
+        <label class="label" for="sub_monitor_dsize">サブカメラ画像サイズ指定</label>
+        <input type="number" value=320 id="sub_monitor_dsizex" name="sub_monitor_dsizex"> x 
+        <input type="number" value=240 id="sub_monitor_dsizey" name="sub_monitor_dsizey"><br><br>
+        <button id="reflect" >カメラサーバに反映</button><br><br>
+
+        <label class="label" for="motor_gain">前進/後退ゲイン</label>
+        <input type="number" value=0.2 id="motor_gain" name="motor_gain"><br><br>
+        <label class="label" for="rotate_gain">旋回速度ゲイン</label>
+        <input type="number" value=0.2 id="rotate_gain" name="rotate_gain"><br><br>
+        <label class="label" for="motor_delay">ロボット操作追加遅延</label>
+        <input type="number" value=0 id="motor_delay" name="motor_delay">(ms)<br><br>
+
+        <label class="label" for="ctime">cool_time</label>
+        <input type="number" value=0 id="ctime" name="ctime">(sec) DEFAULT:0<br><br>
+        <label class="label" for="upi">units_per_input</label>
+        <input type="number" value=1 id="upi" name="upi"> DEFAULT:1 <br><br>
+      </div>
+      <div class="gui">
+        <div class="target-container">
+          <div id="target" ></div>
+        </div>
+        <div class="arrows">
+          <div class="circle" id="arrow-up"></div>
+          <div class="circle" id="arrow-down"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<style>
+
+  .displays{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .camera-display{
+    display:flex;
+    flex-direction:row;
+  }
+
+  .camera-display  iframe{
+    overflow-y: hidden;
+  }
+  .label{
+    width:100px;
+  }
+  .control-panel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .gui{
+    display:flex;
+    align-items:center;
+  }
+  .arrows{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+  }
+  .circle{
+    width:44px;
+    height:44px;
+    margin: 12px 44px;
+    border-radius: 50%;
+    background-color: grey;
+  }
+  .param-controls{
+    margin-top:60px;
+  }
+  .not-pressed{
+    background-color: grey;
+  }
+  .pressed{
+    background-color: black;
+  }
+  #target{
+    background-color:white;
+    width:50px;
+    height:50px;
+    position:relative;
+    border-radius:50%;
+    bottom:-50%;
+    left:50%;
+    transform: translateY(-50%) translateX(-50%);
+    -webkit-transform: translateY(-50%) translateX(-50%);
+    border:solid 5px black;
+  }
+
+  .target-container{
+    width:500px;
+    height:500px;
+    margin:auto;
+    position:relative;
+    background-color:rgba(200,200,255,0.5);
+    border-radius: 50%;
+  }
+</style>
+
+<script type="text/javascript">
+const AXIS_L_HORIZONTAL_INDEX=0
+const AXIS_L_VERTICAL_INDEX=1
+const AXIS_R_HORIZONTAL_INDEX=2
+const AXIS_R_VERTICAL_INDEX=3
+const BUTTONS_ARROW_UP=12
+const BUTTONS_ARROW_DOWN=13
+const BUTTONS_ARROW_LEFT=14
+const BUTTONS_ARROW_RIGHT=15
+var connectedGamepadIndex=0
+var loopID
+//const server_url = "ws://localhost:9090";
+const server_url = "ws://192.168.1.2:9090";
+const servo_server_url = "ws://192.168.43.86:3001";
+const socket = new WebSocket(server_url);
+//const servo_socket = new WebSocket(servo_server_url);
+
+//カメラサーバ
+const main_camera1_server_url = "http://localhost:5000"
+const main_camera2_server_url = "http://localhost:5001"
+const sub_camera1_server_url = "http://192.168.43.233:5000"
+const sub_camera2_server_url = "http://192.168.43.250:5000"
+
+
+
+// 移動コマンド生成用ヘルパー関数
+// lin_x: 正の値で前進、負の値で後退、単位は[m/s]
+// ang_z: 正の値で反時計回りに、負の値で時計回りに旋回、単位は[rad/s]
+function generate_cmd_vel_msg(lin_x, ang_z) {
+    return {
+        "op": "publish",
+        "topic": "/cleanbot3/cmd_vel",
+        "msg": {
+            "linear": {"x": lin_x, "y": 0.0, "z": 0.0},
+            "angular": {"x": 0.0, "y": 0.0, "z": ang_z}
+        }
+    }
+}
+
+// WebSocketによる接続確立後、反時計回りに0.2[rad/s]で5秒間旋回し、停止コマンドを送信
+socket.addEventListener("open", ()=>{
+    // 旋回命令を送信
+    console.log("move");
+    let msg = generate_cmd_vel_msg(0.0, 0.2);
+    socket.send(JSON.stringify(msg))
+
+    // 5秒後に停止命令をセット
+    setTimeout(()=>{
+        console.log("stop")
+        let msg = generate_cmd_vel_msg(0.0, 0.0);
+        socket.send(JSON.stringify(msg));
+    }, 5000)
+})
+
+
+
+window.addEventListener("gamepadconnected", function(e) {
+  var gp = navigator.getGamepads()[e.gamepad.index];
+  console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+  gp.index, gp.id,
+  gp.buttons.length, gp.axes.length);
+  connectedGamepadIndex = e.gamepad.index;
+  loopID = requestAnimationFrame(loop);
+});
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return; // Do nothing if the event was already processed
+  }
+
+  switch (event.key) {
+    case "ArrowDown":
+      // code for "down arrow" key press.
+      var servomsg = {dir:"negative",gain:1,sleep_time:0.1}
+      servo_socket.send(JSON.stringify(servomsg))
+      break;
+    case "ArrowUp":
+      // code for "up arrow" key press.
+      var servomsg = {dir:"positive",gain:1,sleep_time:0.1}
+      servo_socket.send(JSON.stringify(servomsg))
+      break;
+    default:
+      return; // Quit when this doesn't handle the key event.
+  }
+
+  // Cancel the default action to avoid it being handled twice
+  event.preventDefault();
+}, true);
+
+var t = 0
+function loop() {
+    //時間
+    t += 1;
+
+    // ゲームパッドの入力情報を毎フレーム取得
+    let gamepads = navigator.getGamepads();
+    let gp = gamepads[connectedGamepadIndex];
+    var position = {bottom:0,left:0}
+
+    // スティックが倒されているかどうかを取得
+    let leftAxisHorizontal = gp.axes[AXIS_L_HORIZONTAL_INDEX];
+    let leftAxisVertical = gp.axes[AXIS_L_VERTICAL_INDEX];
+    let rightAxisVertical = gp.axes[AXIS_R_VERTICAL_INDEX];
+
+    //ボタン配置
+    let arrowButtonUp = gp.buttons[BUTTONS_ARROW_UP];
+    let arrowButtonDown = gp.buttons[BUTTONS_ARROW_DOWN];
+    let arrowButtonLeft = gp.buttons[BUTTONS_ARROW_LEFT];
+    let arrowButtonRight = gp.buttons[BUTTONS_ARROW_RIGHT];
+
+    //console.log(`Lスティックが倒されました。Hor:${leftAxisHorizontal}, Ver:${leftAxisVertical}`);
+    position = {bottom:leftAxisVertical*50,left:leftAxisHorizontal*50}
+
+    //GUIに反映
+    var target = document.getElementById('target')
+    target.style.bottom = -(50 + position.bottom) + '%'
+    target.style.left = 50 + position.left + '%'
+
+    //ロボットに入力を送信
+    var input_motor_gain = document.getElementById("motor_gain").value;
+    var input_rotate_gain = document.getElementById("rotate_gain").value;
+    var input_motor_delay = document.getElementById("motor_delay").value;
+
+    var motor_gain = Number(input_motor_gain)
+    var rotate_gain = Number(input_rotate_gain)
+    var motor_delay = Number(input_motor_delay)
+    let msg = generate_cmd_vel_msg(leftAxisVertical*motor_gain,leftAxisHorizontal*rotate_gain)
+    //console.log(msg.msg.linear)
+    //console.log(msg.msg.angular)
+    //console.log(motor_delay)
+    //websocket通信
+    try{
+      setTimeout( () => {
+        console.log(msg.msg.linear)
+        socket.send(JSON.stringify(msg))
+      },motor_delay)
+    }
+    catch(e){
+      console.log("サーバに接続されていません。")
+    }
+
+    //サーボモータ動作制御 十字ボタン上下
+
+    //テキストボックスから値の取得
+    var input_ctime = document.getElementById("ctime").value;
+    var input_upi = document.getElementById("upi").value;
+
+    if(arrowButtonLeft.pressed){
+      if(t > 1*input_ctime*50){
+        var servomsg = {dir:"positive",gain:Number(input_upi),sleep_time:Number(input_ctime)}
+        //servo_socket.send(JSON.stringify(servomsg)) 
+
+        //GUI
+        var obj = document.getElementById("arrow-up");
+        obj.classList.add("pressed");
+        t=0
+      }
+    }
+    else if(arrowButtonRight.pressed){
+      if(t > 1*input_ctime*50){
+        var servomsg = {dir:"negative",gain:Number(input_upi),sleep_time:Number(input_ctime)}
+        //servo_socket.send(JSON.stringify(servomsg))
+
+        //GUI
+        var obj = document.getElementById("arrow-down");
+        obj.classList.add("pressed");
+        t=0
+      }
+    }
+    else{
+      var obj_up = document.getElementById("arrow-up");
+      var obj_down = document.getElementById("arrow-down");
+      obj_up.classList.remove("pressed"); 
+      obj_down.classList.remove("pressed"); 
+    }
+    requestAnimationFrame(loop);
+}
+
+$(function(){
+  $('#reflect').click(function(){
+    var monitor_fps = document.getElementById("monitor_fps").value;
+    var monitor_sub_fps = document.getElementById("monitor_sub_fps").value;
+    var monitor_delay = document.getElementById("monitor_delay").value;
+
+    //カメラ画像サイズ指定
+    var main_monitor_dsize = [document.getElementById("main_monitor_dsizex").value,document.getElementById("main_monitor_dsizey").value];
+    var sub_monitor_dsize = [document.getElementById("sub_monitor_dsizex").value,document.getElementById("sub_monitor_dsizey").value];
+ 
+    //Ajaxに渡すデータ
+    var dt = {fps:Number(monitor_fps), delay:Number(monitor_delay)}; 
+    var dt_sub = {fps:Number(monitor_sub_fps), delay:Number(monitor_delay)}; 
+
+    var dsize_main = {dsize_x:Number(main_monitor_dsize[0]),dsize_y:Number(main_monitor_dsize[1])}
+    var dsize_sub = {dsize_x:Number(sub_monitor_dsize[0]),dsize_y:Number(sub_monitor_dsize[1])}
+ 
+    //Ajax通信を行う
+    $.ajax({
+        url:main_camera1_server_url+"/params",
+        type:"post",
+        dataType:"JSON",
+        data:JSON.stringify(dt), 
+        contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    //Ajax通信を行う
+    $.ajax({
+    url:main_camera2_server_url+"/params",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dt), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    //Ajax通信を行う
+    $.ajax({
+    url:sub_camera1_server_url+"/params",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dt_sub), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    //Ajax通信を行う
+    $.ajax({
+    url:sub_camera2_server_url+"/params",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dt_sub), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    //メインカメラ画像サイズの指定
+    $.ajax({
+    url:main_camera1_server_url+"/dsize",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dsize_main), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+
+    //Ajax通信を行う
+    $.ajax({
+    url:main_camera2_server_url+"/dsize",
+    type:"post",
+    dataType:"JSON",
+    data:JSON.stringify(dsize_main), 
+    contentType: 'application/JSON', 
+    })
+    .done((data) => {
+      //成功した場合の処理
+      console.log(data);
+    })
+    .fail((data) => {
+      //失敗した場合の処理
+      console.log(data.responseText);  //レスポンス文字列を表示
+    })
+    .always((data) => {
+      //成功・失敗どちらでも行う処理
+      console.log(data);
+    });
+  });
+ 
+});
+</script>
