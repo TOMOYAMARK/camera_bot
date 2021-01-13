@@ -52,13 +52,13 @@
         <div class="sub-camera-panel">
           <div class="sub-camera-display">
             <img src="http://192.168.43.233:5000/video_feed"
-            title="iframe Example 1" id="sub_camera_1" width="320" height="240">
+            title="iframe Example 1" id="sub_camera_1" class="sub-screen" width="320" height="240">
             </img>
             <div class="sub-label right">sub</div>
           </div>
           <div class="sub-camera-display">
             <img src="http://192.168.43.250:5000/video_feed"
-        title="iframe Example 1" id="sub_camera_2" width="320" height="240">
+        title="iframe Example 1" id="sub_camera_2" class="sub-screen" width="320" height="240">
             </img>
             <div class="sub-label left">sub</div>
           </div>
@@ -146,6 +146,11 @@ html,body{
 
 .right{
   right:0;
+}
+
+
+.sub-screen{
+  transform:scale(1,-1);
 }
 
 .sub-label{

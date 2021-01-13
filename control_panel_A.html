@@ -17,7 +17,7 @@
           <div class="main-label left">main</div>
         </div>
         <div class="main-camera-display">
-          <img src="http://192.168.43.16:5000/video_feed"
+          <img src="http://192.168.43.16:5001/video_feed"
         title="iframe Example 1" id="main_camera_2" width="640" height="360">
           </img>
           <div class="main-label right">main</div>
@@ -58,13 +58,13 @@
         <div class="sub-camera-panel">
           <div class="sub-camera-display">
             <img src="http://192.168.43.233:5000/video_feed"
-            title="iframe Example 1" id="sub_camera_1" width="320" height="240">
+            title="sub camera 1" id="sub_camera_1" class="sub-screen" width="320" height="240">
             </img>
             <div class="sub-label right">sub</div>
           </div>
           <div class="sub-camera-display">
             <img src="http://192.168.43.250:5000/video_feed"
-        title="iframe Example 1" id="sub_camera_2" width="320" height="240">
+        title="sub camera 2" id="sub_camera_2" class="sub-screen" width="320" height="240">
             </img>
             <div class="sub-label left">sub</div>
           </div>
@@ -132,6 +132,10 @@ html,body{
   align-items:center;
   border:18px solid #62BE90;
   margin:auto;
+}
+
+.sub-screen{
+  transform:scale(1,-1);
 }
 
 .main-label{
